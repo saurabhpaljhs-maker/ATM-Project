@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ramji-atm-deployment
+  namespace: default
+  labels:
+    app: atm-project-app
+    component: banking-gateway
+spec:
+  replicas: 2 # ATM application hamesha high-availability par 2 pods ke sath chalegi
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1       # Naye deployment ke waqt max 1 extra pod banega
+      maxUnavailable: 0 # Update ke dauran 0% down-time policy
+  selector:
+    matchLabels:
+      app: atm-project-app
+  template:
+    metadata:
+      labels:
+        app: atm-project-app
+    spec:
+      containers:
+      - name: atm-gateway
+        # CRITICAL NOTE: Jenkins pipeline is placeholder ko sed command se dynamic image tag se replace karegi
+        image: your-dockerhub-username/atm-project-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8081 # Hamare server.js aur Dockerfile se tight sync
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ramji-atm-service
+  namespace: default
+spec:
+  type: LoadBalancer # EKS runtime standard automatic cloud dynamic load balancer create karega
+  ports:
+  - port: 80         # Internet user port 80 par connect karega
+    targetPort: 8081 # Backend container dynamic execution routing port
+  selector:
+    app: atm-project-app
