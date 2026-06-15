@@ -18,7 +18,6 @@ pipeline {
 
         stage('2. SonarQube Static Scan') {
             steps {
-                echo "---- Stage 2: Running Security Scan ----"
                 script {
                     def scannerHome = tool name: 'sonar-scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
@@ -46,14 +45,12 @@ pipeline {
         stage('4. Docker Build Simulation') {
             steps {
                 echo "---- Stage 4: Preparing Container Build ----"
-                echo "Docker build simulated."
             }
         }
 
         stage('5. Docker Push Simulation') {
             steps {
                 echo "---- Stage 5: Preparing Container Registry Push ----"
-                echo "Docker push simulated."
             }
         }
 
@@ -72,9 +69,15 @@ pipeline {
                             :: Apply Deployment
                             C:\\kubernetes\\kubectl.exe --kubeconfig kube.config apply -f k8s/deploy.yaml
                             
-                            :: Check Pod Status (Debugging)
-                            echo ---- Checking Pod Status ----
+                            :: Debugging: Get Pod Status and Describe them to find Pending reason
+                            echo ---- Debugging Pending Pods ----
                             C:\\kubernetes\\kubectl.exe --kubeconfig kube.config get pods
+                            
+                            :: Get the name of a pending pod and describe it
+                            FOR /F "tokens=1" %%i IN ('C:\\kubernetes\\kubectl.exe --kubeconfig kube.config get pods --no-headers ^| findstr Pending') DO (
+                                echo Describing pod %%i...
+                                C:\\kubernetes\\kubectl.exe --kubeconfig kube.config describe pod %%i
+                            )
                             
                             :: Rollout Status
                             C:\\kubernetes\\kubectl.exe --kubeconfig kube.config rollout status deployment/ramji-atm-deployment --timeout=300s
@@ -89,9 +92,6 @@ pipeline {
         always {
             echo "---- Cleaning Workspace ----"
             cleanWs()
-        }
-        failure {
-            echo "Pipeline Failed! Check Stage 6 logs for Pod issues."
         }
     }
 }
