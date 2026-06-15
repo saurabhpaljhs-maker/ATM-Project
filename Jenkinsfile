@@ -2,29 +2,28 @@ pipeline {
     agent any
 
     environment {
-        // Project strict naming configurations
+        // Project configuration parameters
         PROJECT_NAME        = 'ATM-Project'
         SONAR_PROJECT_KEY   = 'atm-project-banking'
         
-        // Registry & Image Details (Apna DockerHub username yahan change kar lena)
-        DOCKER_HUB_USER     = 'your-dockerhub-username'
+        // Docker Registry & Image Metadata
+        DOCKER_HUB_USER     = 'sauraabh'
         IMAGE_NAME          = "${DOCKER_HUB_USER}/atm-project-app"
         IMAGE_TAG           = "${BUILD_NUMBER}" 
         
-        // Jenkins UI Credentials IDs (Jo aap Jenkins Dashboard par exact banaoge)
-        SONAR_SERVER_REF    = 'sonar-server'      // Manage Jenkins -> System me jo naam doge
-        DOCKER_CREDS_ID     = 'docker-hub-creds'  // Docker Hub ka username-password ID
-        AWS_CREDS_ID        = 'aws-cloud-creds'   // AWS Access & Secret Key ki ID
+        // Jenkins UI Credentials Mapping
+        SONAR_SERVER_REF    = 'sonar-server'      // Defined in Manage Jenkins -> System
+        DOCKER_CREDS_ID     = 'dockerhub'         // Docker Hub Credential ID from Jenkins UI
         
-        // Infrastructure Details
+        // AWS Infrastructure Target Details
         AWS_REGION          = 'us-east-1'
         EKS_CLUSTER_NAME    = 'ramji-atm-cluster'
     }
 
     options {
-        timeout(time: 1, hours: true) // Build agar 1 ghante se upar fase toh auto-abort
-        timestamps()                  // Logs me time dikhane ke liye
-        disableConcurrentBuilds()     // Ek sath do builds ko rokne ke liye
+        timeout(time: 1, hours: true) // Automatically abort the build if it hangs over 1 hour
+        timestamps()                  // Enable timestamps in console output logs
+        disableConcurrentBuilds()     // Prevent concurrent executions of the same pipeline
     }
 
     stages {
@@ -90,17 +89,22 @@ pipeline {
         stage('6. Deploy to Kubernetes') {
             steps {
                 echo "---- Direct CD Deployment to EKS via Kubectl ----"
-                withCredentials([usernamePassword(credentialsId: "${AWS_CREDS_ID}", usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                // Injecting secret environment variables from individual Jenkins credentials
+                withCredentials([
+                    string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_KEY'),
+                    string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET')
+                ]) {
                     sh """
-                        export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-                        export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+                        export AWS_ACCESS_KEY_ID=\${AWS_KEY}
+                        export AWS_SECRET_ACCESS_KEY=\${AWS_SECRET}
                         
-                        # Azure VM se AWS cluster connect karne ki command
+                        # Authenticate Azure VM with AWS EKS Cluster
                         aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
                         
-                        # deploy.yaml me dynamic image tag update karne ke liye
+                        # Update the deployment manifest dynamically with the latest build tag
                         sed -i 's|image: .*/atm-project-app:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|g' k8s/deploy.yaml
                         
+                        # Apply manifests and monitor the rollout status
                         kubectl apply -f k8s/deploy.yaml
                         kubectl rollout status deployment/ramji-atm-deployment --timeout=60s
                     """
