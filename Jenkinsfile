@@ -94,15 +94,30 @@ pipeline {
                         set AWS_SECRET_ACCESS_KEY=%AWS_SECRET%
                         set AWS_DEFAULT_REGION=${AWS_REGION}
                         
-                        echo ---- Updating Kubeconfig ----
+                        echo ---- Updating Kubeconfig context ----
                         aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
                         
-                        echo ---- Applying Kubernetes Manifests ----
-                        C:\\kubernetes\\kubectl.exe apply -f k8s/deploy.yaml --aws-profile=default
+                        echo ---- Applying Kubernetes Manifests onto Cluster ----
+                        C:\\kubernetes\\kubectl.exe apply -f k8s/deploy.yaml
                         
-                        echo ---- Checking Rollout Status ----
+                        echo ---- Verifying Rollout Status ----
                         C:\\kubernetes\\kubectl.exe rollout status deployment/ramji-atm-deployment --timeout=60s
                     """
                 }
             }
         }
+    }
+
+    post {
+        always {
+            echo "---- Cleaning up workspace to save space ----"
+            cleanWs()
+        }
+        success {
+            echo "Bhai, ${PROJECT_NAME} safely deploy ho gaya hai cluster par!"
+        }
+        failure {
+            echo "Pipeline failed! Please check logs for errors."
+        }
+    }
+}
