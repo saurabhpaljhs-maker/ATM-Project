@@ -66,18 +66,16 @@ pipeline {
             }
         }
 
-        stage('4. Docker Build Container') {
-            steps {
-                echo "---- Building Safe Docker Image for ${PROJECT_NAME} ----"
-                // Using advanced PowerShell environment lookup to execute docker flawlessly on Windows
-                powershell """
-                    \$env:PATH += ";C:\\Program Files\\Docker\\Docker\\resources\\bin"
-                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
-                """
-            }
-        }
-
+       stage('4. Docker Build Container') {
+    steps {
+        echo "---- Building Safe Docker Image for ATM-Project ----"
+        bat """
+            docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+            docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+        """
+    }
+}
+        
         stage('5. Docker Push Registry') {
             steps {
                 echo "---- Pushing ${PROJECT_NAME} Image to Docker Hub ----"
