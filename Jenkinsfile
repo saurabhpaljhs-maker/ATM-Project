@@ -21,7 +21,7 @@ pipeline {
     }
 
     options {
-        timeout(time: 1, hours: true) // Automatically abort the build if it hangs over 1 hour
+        timeout(time: 1, unit: 'HOURS') // Automatically abort the build if it hangs over 1 hour
         timestamps()                  // Enable timestamps in console output logs
         disableConcurrentBuilds()     // Prevent concurrent executions of the same pipeline
     }
