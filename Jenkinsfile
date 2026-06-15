@@ -57,29 +57,32 @@ pipeline {
             }
         }
 
-        stage('6. Deploy to Kubernetes') {
+       stage('6. Deploy to Kubernetes') {
             steps {
-                echo "---- Stage 6: Deploying to EKS with Token Auth ----"
+                echo "---- Stage 6: Deploying to EKS ----"
                 withCredentials([
                     string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_KEY'),
                     string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET')
                 ]) {
                     withEnv(["AWS_ACCESS_KEY_ID=${AWS_KEY}", "AWS_SECRET_ACCESS_KEY=${AWS_SECRET}", "AWS_DEFAULT_REGION=${AWS_REGION}"]) {
                         bat """
-                            :: Generate Kubeconfig fresh
-                            aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME} --kubeconfig kube.config
+                            :: Update kubeconfig
+                            aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME} --kubeconfig kube.config || exit /b 1
                             
-                            :: Use kubectl with the generated config
-                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config apply -f k8s/deploy.yaml
+                            :: Apply manifests
+                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config apply -f k8s/deploy.yaml || exit /b 1
                             
-                            :: Rollout Status
-                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config rollout status deployment/ramji-atm-deployment --timeout=60s
+                            :: Debugging info
+                            echo ---- Checking Pod Status ----
+                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config get pods
+                            
+                            :: Rollout status
+                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config rollout status deployment/ramji-atm-deployment --timeout=300s || exit /b 1
                         """
                     }
                 }
             }
         }
-    }
 
     post {
         always {
