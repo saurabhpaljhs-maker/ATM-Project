@@ -46,18 +46,18 @@ pipeline {
         stage('4. Docker Build Simulation') {
             steps {
                 echo "---- Stage 4: Preparing Container Build ----"
-                echo "Docker build simulated for ${PROJECT_NAME}."
+                echo "Docker build simulated."
             }
         }
 
         stage('5. Docker Push Simulation') {
             steps {
                 echo "---- Stage 5: Preparing Container Registry Push ----"
-                echo "Docker push simulated to registry."
+                echo "Docker push simulated."
             }
         }
 
-       stage('6. Deploy to Kubernetes') {
+        stage('6. Deploy to Kubernetes') {
             steps {
                 echo "---- Stage 6: Deploying to EKS ----"
                 withCredentials([
@@ -66,28 +66,32 @@ pipeline {
                 ]) {
                     withEnv(["AWS_ACCESS_KEY_ID=${AWS_KEY}", "AWS_SECRET_ACCESS_KEY=${AWS_SECRET}", "AWS_DEFAULT_REGION=${AWS_REGION}"]) {
                         bat """
-                            :: Update kubeconfig
-                            aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME} --kubeconfig kube.config || exit /b 1
+                            :: Update Kubeconfig
+                            aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME} --kubeconfig kube.config
                             
-                            :: Apply manifests
-                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config apply -f k8s/deploy.yaml || exit /b 1
+                            :: Apply Deployment
+                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config apply -f k8s/deploy.yaml
                             
-                            :: Debugging info
+                            :: Check Pod Status (Debugging)
                             echo ---- Checking Pod Status ----
                             C:\\kubernetes\\kubectl.exe --kubeconfig kube.config get pods
                             
-                            :: Rollout status
-                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config rollout status deployment/ramji-atm-deployment --timeout=300s || exit /b 1
+                            :: Rollout Status
+                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config rollout status deployment/ramji-atm-deployment --timeout=300s
                         """
                     }
                 }
             }
         }
+    }
 
     post {
         always {
             echo "---- Cleaning Workspace ----"
             cleanWs()
+        }
+        failure {
+            echo "Pipeline Failed! Check Stage 6 logs for Pod issues."
         }
     }
 }
