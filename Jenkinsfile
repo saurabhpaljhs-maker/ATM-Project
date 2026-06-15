@@ -11,6 +11,9 @@ pipeline {
         IMAGE_NAME          = "${DOCKER_HUB_USER}/atm-project-app"
         IMAGE_TAG           = "${BUILD_NUMBER}" 
         
+        // Windows PATH override for Docker Desktop (Default installation directory)
+        DOCKER_PATH         = 'C:\\Program Files\\Docker\\Docker\\resources\\bin'
+        
         // Jenkins UI Credentials Mapping
         SONAR_CRED_ID       = 'sonar-token'       // Directly references your exact 'sonar-token' credential ID
         DOCKER_CREDS_ID     = 'dockerhub'         // Docker Hub Credential ID from Jenkins UI
@@ -38,11 +41,9 @@ pipeline {
             steps {
                 echo "---- Running Security Scan for ${PROJECT_NAME} ----"
                 script {
-                    // Fetches the home path of auto-configured SonarQube Scanner tool from Jenkins backend
                     def scannerHome = tool name: 'sonar-scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                     
                     withCredentials([string(credentialsId: "${SONAR_CRED_ID}", variable: 'SONAR_TOKEN')]) {
-                        // Using 'bat' execution context to comply with Windows node specifications
                         bat """
                             "${scannerHome}\\bin\\sonar-scanner.bat" ^
                             -Dsonar.projectKey=${SONAR_PROJECT_KEY} ^
@@ -71,13 +72,12 @@ pipeline {
         stage('4. Docker Build Container') {
             steps {
                 echo "---- Building Safe Docker Image for ${PROJECT_NAME} ----"
-                script {
-                    // Executing containerization steps via Windows batch context
-                    bat """
-                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
-                    """
-                }
+                // Adding Docker path temporarily to Windows context to enable binary accessibility
+                bat """
+                    set PATH=%PATH%;${DOCKER_PATH}
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                """
             }
         }
 
@@ -86,6 +86,7 @@ pipeline {
                 echo "---- Pushing ${PROJECT_NAME} Image to Docker Hub ----"
                 withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDS_ID}", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     bat """
+                        set PATH=%PATH%;${DOCKER_PATH}
                         echo %PASS% | docker login -u %USER% --password-stdin
                         docker push ${IMAGE_NAME}:${IMAGE_TAG}
                         docker push ${IMAGE_NAME}:latest
