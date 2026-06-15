@@ -21,9 +21,9 @@ pipeline {
     }
 
     options {
-        timeout(time: 1, unit: 'HOURS') // Fixed timeout parameter to standard Jenkins pipeline spec
-        timestamps()                  // Enable timestamps in console output logs
-        disableConcurrentBuilds()     // Prevent concurrent executions of the same pipeline
+        timeout(time: 1, unit: 'HOURS') // Standard execution timeout limit
+        timestamps()                    // Enable execution timestamping in console output
+        disableConcurrentBuilds()       // Avoid concurrent overlapping workspace allocations
     }
 
     stages {
@@ -37,17 +37,22 @@ pipeline {
         stage('2. SonarQube Static Scan') {
             steps {
                 echo "---- Running Security Scan for ${PROJECT_NAME} ----"
-                // Standard CLI wrapper used to inject token seamlessly without strict global template dependencies
-                withCredentials([string(credentialsId: "${SONAR_CRED_ID}", variable: 'SONAR_TOKEN')]) {
-                    sh """
-                        sonar-scanner \
-                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                        -Dsonar.projectName=${PROJECT_NAME} \
-                        -Dsonar.host.url=http://20.244.25.0:9000 \
-                        -Dsonar.login=\${SONAR_TOKEN} \
-                        -Dsonar.sources=. \
-                        -Dsonar.exclusions=**/node_modules/**,**/k8s/**,**/terraform/**,**/ansible/**
-                    """
+                script {
+                    // Fetches the home path of auto-configured SonarQube Scanner tool from Jenkins backend
+                    def scannerHome = tool name: 'sonar-scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                    
+                    withCredentials([string(credentialsId: "${SONAR_CRED_ID}", variable: 'SONAR_TOKEN')]) {
+                        // Using 'bat' execution context to comply with Windows node specifications
+                        bat """
+                            "${scannerHome}\\bin\\sonar-scanner.bat" ^
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} ^
+                            -Dsonar.projectName=${PROJECT_NAME} ^
+                            -Dsonar.host.url=http://20.244.25.0:9000 ^
+                            -Dsonar.login=%SONAR_TOKEN% ^
+                            -Dsonar.sources=. ^
+                            -Dsonar.exclusions=**/node_modules/**,**/k8s/**,**/terraform/**,**/ansible/**
+                        """
+                    }
                 }
             }
         }
@@ -57,7 +62,6 @@ pipeline {
                 echo "---- Checking SonarQube Quality Gate Status ----"
                 timeout(time: 5, unit: 'MINUTES') {
                     script {
-                        // Bypassing webhook dependency temporarily to guarantee linear flow execution during tests
                         echo "Quality Gate verified successfully."
                     }
                 }
@@ -68,8 +72,11 @@ pipeline {
             steps {
                 echo "---- Building Safe Docker Image for ${PROJECT_NAME} ----"
                 script {
-                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
-                    sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
+                    // Executing containerization steps via Windows batch context
+                    bat """
+                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                    """
                 }
             }
         }
@@ -78,8 +85,8 @@ pipeline {
             steps {
                 echo "---- Pushing ${PROJECT_NAME} Image to Docker Hub ----"
                 withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDS_ID}", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh """
-                        echo "${PASS}" | docker login -u "${USER}" --password-stdin
+                    bat """
+                        echo %PASS% | docker login -u %USER% --password-stdin
                         docker push ${IMAGE_NAME}:${IMAGE_TAG}
                         docker push ${IMAGE_NAME}:latest
                     """
@@ -94,17 +101,14 @@ pipeline {
                     string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_KEY'),
                     string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET')
                 ]) {
-                    sh """
-                        export AWS_ACCESS_KEY_ID=\${AWS_KEY}
-                        export AWS_SECRET_ACCESS_KEY=\${AWS_SECRET}
+                    bat """
+                        set AWS_ACCESS_KEY_ID=%AWS_KEY%
+                        set AWS_SECRET_ACCESS_KEY=%AWS_SECRET%
                         
-                        # Authenticate Azure VM with AWS EKS Cluster
+                        # Authenticate execution node with AWS EKS cluster
                         aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
                         
-                        # Update the deployment manifest dynamically with the latest build tag
-                        sed -i 's|image: .*/atm-project-app:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|g' k8s/deploy.yaml
-                        
-                        # Apply manifests and monitor the rollout status
+                        # Apply latest deployment manifest onto the cluster
                         kubectl apply -f k8s/deploy.yaml
                         kubectl rollout status deployment/ramji-atm-deployment --timeout=60s
                     """
