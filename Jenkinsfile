@@ -59,24 +59,21 @@ pipeline {
 
         stage('6. Deploy to Kubernetes') {
             steps {
-                echo "---- Stage 6: Deploying to EKS ----"
+                echo "---- Stage 6: Deploying to EKS with Token Auth ----"
                 withCredentials([
                     string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_KEY'),
                     string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET')
                 ]) {
                     withEnv(["AWS_ACCESS_KEY_ID=${AWS_KEY}", "AWS_SECRET_ACCESS_KEY=${AWS_SECRET}", "AWS_DEFAULT_REGION=${AWS_REGION}"]) {
                         bat """
-                            :: Create workspace local config
-                            if not exist .kube mkdir .kube
+                            :: Generate Kubeconfig fresh
+                            aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME} --kubeconfig kube.config
                             
-                            :: Update config
-                            aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME} --kubeconfig .kube/config
+                            :: Use kubectl with the generated config
+                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config apply -f k8s/deploy.yaml
                             
-                            :: Deploy with specific config
-                            C:\\kubernetes\\kubectl.exe --kubeconfig .kube/config apply -f k8s/deploy.yaml
-                            
-                            :: Verify rollout
-                            C:\\kubernetes\\kubectl.exe --kubeconfig .kube/config rollout status deployment/ramji-atm-deployment --timeout=60s
+                            :: Rollout Status
+                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config rollout status deployment/ramji-atm-deployment --timeout=60s
                         """
                     }
                 }
@@ -86,7 +83,7 @@ pipeline {
 
     post {
         always {
-            echo "---- Post Actions: Cleaning Workspace ----"
+            echo "---- Cleaning Workspace ----"
             cleanWs()
         }
     }
