@@ -12,8 +12,8 @@ pipeline {
         IMAGE_TAG           = "${BUILD_NUMBER}" 
         
         // Jenkins UI Credentials Mapping
-        SONAR_CRED_ID       = 'sonar-token'       // References your exact 'sonar-token' credential ID
-        DOCKER_CREDS_ID     = 'dockerhub'         // Docker Hub Credential ID from Jenkins UI
+        SONAR_CRED_ID       = 'sonar-token'       
+        DOCKER_CREDS_ID     = 'dockerhub'         
         
         // Infrastructure Details
         AWS_REGION          = 'us-east-1'
@@ -21,9 +21,9 @@ pipeline {
     }
 
     options {
-        timeout(time: 1, unit: 'HOURS') // Standard execution timeout limit
-        timestamps()                    // Enable execution timestamping in console output
-        disableConcurrentBuilds()       // Avoid concurrent overlapping workspace allocations
+        timeout(time: 1, unit: 'HOURS') 
+        timestamps()                    
+        disableConcurrentBuilds()       
     }
 
     stages {
@@ -81,21 +81,30 @@ pipeline {
             }
         }
 
-      stage('6. Deploy to Kubernetes') {
+        stage('6. Deploy to Kubernetes') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'aws-creds', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
-                    bat '''
-                    aws eks update-kubeconfig --region us-east-1 --name ramji-atm-cluster
-                    C:\\kubernetes\\kubectl.exe apply -f k8s/deploy.yaml
-                    C:\\kubernetes\\kubectl.exe rollout status deployment/ramji-atm-deployment --timeout=60s
-                    '''
+                echo "---- Direct CD Deployment to EKS via Absolute Path Kubectl ----"
+                withCredentials([
+                    string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_KEY'),
+                    string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET')
+                ]) {
+                    bat """
+                        set AWS_ACCESS_KEY_ID=%AWS_KEY%
+                        set AWS_SECRET_ACCESS_KEY=%AWS_SECRET%
+                        
+                        aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
+                        
+                        C:\\kubernetes\\kubectl.exe apply -f k8s/deploy.yaml
+                        C:\\kubernetes\\kubectl.exe rollout status deployment/ramji-atm-deployment --timeout=60s
+                    """
                 }
             }
         }
+    }
 
     post {
         always {
-            echo "---- Cleaning up workspace to save Azure VM storage ----"
+            echo "---- Cleaning up workspace to save space ----"
             cleanWs()
         }
         success {
