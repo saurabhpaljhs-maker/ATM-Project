@@ -69,11 +69,16 @@ pipeline {
         stage('4. Docker Build Container') {
             steps {
                 echo "---- Building Safe Docker Image for ${PROJECT_NAME} ----"
-                // Using absolute path for Docker binary to ensure execution on Windows local system
-                bat """
-                    "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                    "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
-                """
+                script {
+                    // Injecting common paths globally into Windows batch execution space to fetch 'docker' binary location
+                    bat """
+                        @echo off
+                        set PATH=%PATH%;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\Docker\\Docker\\resources;C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker-credential-desktop.exe
+                        
+                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                    """
+                }
             }
         }
 
@@ -81,12 +86,16 @@ pipeline {
             steps {
                 echo "---- Pushing ${PROJECT_NAME} Image to Docker Hub ----"
                 withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDS_ID}", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    // Executing container login and push steps using the exact executable path
-                    bat """
-                        echo %PASS% | "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" login -u %USER% --password-stdin
-                        "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" push ${IMAGE_NAME}:${IMAGE_TAG}
-                        "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" push ${IMAGE_NAME}:latest
-                    """
+                    script {
+                        bat """
+                            @echo off
+                            set PATH=%PATH%;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\Docker\\Docker\\resources
+                            
+                            echo %PASS% | docker login -u %USER% --password-stdin
+                            docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                            docker push ${IMAGE_NAME}:latest
+                        """
+                    }
                 }
             }
         }
