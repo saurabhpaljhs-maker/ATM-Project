@@ -11,9 +11,6 @@ pipeline {
         IMAGE_NAME          = "${DOCKER_HUB_USER}/atm-project-app"
         IMAGE_TAG           = "${BUILD_NUMBER}" 
         
-        // Windows PATH override for Docker Desktop (Default installation directory)
-        DOCKER_PATH         = 'C:\\Program Files\\Docker\\Docker\\resources\\bin'
-        
         // Jenkins UI Credentials Mapping
         SONAR_CRED_ID       = 'sonar-token'       // Directly references your exact 'sonar-token' credential ID
         DOCKER_CREDS_ID     = 'dockerhub'         // Docker Hub Credential ID from Jenkins UI
@@ -72,9 +69,10 @@ pipeline {
         stage('4. Docker Build Container') {
             steps {
                 echo "---- Building Safe Docker Image for ${PROJECT_NAME} ----"
+                // Using absolute path for Docker binary to ensure execution on Windows local system
                 bat """
-                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                    "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                    "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
                 """
             }
         }
@@ -83,10 +81,11 @@ pipeline {
             steps {
                 echo "---- Pushing ${PROJECT_NAME} Image to Docker Hub ----"
                 withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDS_ID}", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    // Executing container login and push steps using the exact executable path
                     bat """
-                        echo %PASS% | docker login -u %USER% --password-stdin
-                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                        docker push ${IMAGE_NAME}:latest
+                        echo %PASS% | "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" login -u %USER% --password-stdin
+                        "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" push ${IMAGE_NAME}:${IMAGE_TAG}
+                        "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" push ${IMAGE_NAME}:latest
                     """
                 }
             }
