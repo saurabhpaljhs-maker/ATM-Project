@@ -70,29 +70,30 @@ pipeline {
             }
         }
 
-        stage('6. Deploy to Kubernetes') {
+       stage('6. Deploy to Kubernetes') {
             steps {
-                echo "---- Direct CD Deployment to EKS via Absolute Path Kubectl ----"
                 withCredentials([
                     string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_KEY'),
                     string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET')
                 ]) {
-                    withEnv(["AWS_ACCESS_KEY_ID=${AWS_KEY}", "AWS_SECRET_ACCESS_KEY=${AWS_SECRET}", "AWS_DEFAULT_REGION=${AWS_REGION}"]) {
-                        bat """
-                            echo ---- Updating Kubeconfig context ----
-                            aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
-                            
-                            echo ---- Applying Kubernetes Manifests onto Cluster ----
-                            C:\\kubernetes\\kubectl.exe apply -f k8s/deploy.yaml
-                            
-                            echo ---- Verifying Rollout Status ----
-                            C:\\kubernetes\\kubectl.exe rollout status deployment/ramji-atm-deployment --timeout=60s
-                        """
-                    }
+                    bat """
+                        :: Set environment for this session only
+                        set AWS_ACCESS_KEY_ID=%AWS_KEY%
+                        set AWS_SECRET_ACCESS_KEY=%AWS_SECRET%
+                        set AWS_DEFAULT_REGION=${AWS_REGION}
+                        
+                        :: Update kubeconfig to point to the cluster
+                        aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME} --kubeconfig .\\kubeconfig
+                        
+                        :: Apply with explicit kubeconfig path
+                        C:\\kubernetes\\kubectl.exe --kubeconfig .\\kubeconfig apply -f k8s/deploy.yaml
+                        
+                        :: Verify
+                        C:\\kubernetes\\kubectl.exe --kubeconfig .\\kubeconfig rollout status deployment/ramji-atm-deployment --timeout=60s
+                    """
                 }
             }
         }
-    }
 
     post {
         always {
