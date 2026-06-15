@@ -72,9 +72,7 @@ pipeline {
         stage('4. Docker Build Container') {
             steps {
                 echo "---- Building Safe Docker Image for ${PROJECT_NAME} ----"
-                // Adding Docker path temporarily to Windows context to enable binary accessibility
                 bat """
-                    set PATH=%PATH%;${DOCKER_PATH}
                     docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
                     docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
                 """
@@ -86,7 +84,6 @@ pipeline {
                 echo "---- Pushing ${PROJECT_NAME} Image to Docker Hub ----"
                 withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDS_ID}", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     bat """
-                        set PATH=%PATH%;${DOCKER_PATH}
                         echo %PASS% | docker login -u %USER% --password-stdin
                         docker push ${IMAGE_NAME}:${IMAGE_TAG}
                         docker push ${IMAGE_NAME}:latest
