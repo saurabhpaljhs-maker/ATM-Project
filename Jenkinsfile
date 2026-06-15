@@ -2,20 +2,13 @@ pipeline {
     agent any
 
     environment {
-        // Project configuration parameters
         PROJECT_NAME        = 'ATM-Project'
         SONAR_PROJECT_KEY   = 'atm-project-banking'
-        
-        // Docker Registry & Image Metadata (Bypassed locally)
         DOCKER_HUB_USER     = 'sauraabh'
         IMAGE_NAME          = "${DOCKER_HUB_USER}/atm-project-app"
         IMAGE_TAG           = "${BUILD_NUMBER}" 
-        
-        // Jenkins UI Credentials Mapping
         SONAR_CRED_ID       = 'sonar-token'       
         DOCKER_CREDS_ID     = 'dockerhub'         
-        
-        // Infrastructure Details
         AWS_REGION          = 'us-east-1'
         EKS_CLUSTER_NAME    = 'ramji-atm-cluster'
     }
@@ -39,7 +32,6 @@ pipeline {
                 echo "---- Running Security Scan for ${PROJECT_NAME} ----"
                 script {
                     def scannerHome = tool name: 'sonar-scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                    
                     withCredentials([string(credentialsId: "${SONAR_CRED_ID}", variable: 'SONAR_TOKEN')]) {
                         bat """
                             "${scannerHome}\\bin\\sonar-scanner.bat" ^
@@ -68,15 +60,12 @@ pipeline {
 
         stage('4. Docker Build Container (Storage Bypass)') {
             steps {
-                echo "---- Storage constraint identified on local node ----"
-                echo "---- Simulating safe docker build for ${PROJECT_NAME} ----"
                 echo "Successfully simulated image build: ${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }
 
         stage('5. Docker Push Registry (Storage Bypass)') {
             steps {
-                echo "---- Simulating image push using mapped credentials: ${DOCKER_CREDS_ID} ----"
                 echo "Successfully simulated image registry push to Docker Hub portal!"
             }
         }
@@ -103,6 +92,8 @@ pipeline {
                 }
             }
         }
+    }
+
     post {
         always {
             echo "---- Cleaning up workspace to save space ----"
