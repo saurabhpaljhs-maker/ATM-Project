@@ -88,26 +88,21 @@ pipeline {
                     string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_KEY'),
                     string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET')
                 ]) {
-                    bat """
-                        @echo off
-                        set AWS_ACCESS_KEY_ID=%AWS_KEY%
-                        set AWS_SECRET_ACCESS_KEY=%AWS_SECRET%
-                        set AWS_DEFAULT_REGION=${AWS_REGION}
-                        
-                        echo ---- Updating Kubeconfig context ----
-                        aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
-                        
-                        echo ---- Applying Kubernetes Manifests onto Cluster ----
-                        C:\\kubernetes\\kubectl.exe apply -f k8s/deploy.yaml
-                        
-                        echo ---- Verifying Rollout Status ----
-                        C:\\kubernetes\\kubectl.exe rollout status deployment/ramji-atm-deployment --timeout=60s
-                    """
+                    withEnv(["AWS_ACCESS_KEY_ID=${AWS_KEY}", "AWS_SECRET_ACCESS_KEY=${AWS_SECRET}", "AWS_DEFAULT_REGION=${AWS_REGION}"]) {
+                        bat """
+                            echo ---- Updating Kubeconfig context ----
+                            aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
+                            
+                            echo ---- Applying Kubernetes Manifests onto Cluster ----
+                            C:\\kubernetes\\kubectl.exe apply -f k8s/deploy.yaml
+                            
+                            echo ---- Verifying Rollout Status ----
+                            C:\\kubernetes\\kubectl.exe rollout status deployment/ramji-atm-deployment --timeout=60s
+                        """
+                    }
                 }
             }
         }
-    }
-
     post {
         always {
             echo "---- Cleaning up workspace to save space ----"
