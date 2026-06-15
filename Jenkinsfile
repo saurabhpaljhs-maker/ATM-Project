@@ -81,17 +81,17 @@ pipeline {
             }
         }
 
-       stage('6. Deploy to Kubernetes') {
-    steps {
-        withCredentials([usernamePassword(credentialsId: 'aws-creds', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
-            bat '''
-            aws eks update-kubeconfig --region us-east-1 --name ramji-atm-cluster
-            C:\\kubernetes\\kubectl.exe apply -f k8s/deploy.yaml
-            C:\\kubernetes\\kubectl.exe rollout status deployment/ramji-atm-deployment --timeout=60s
-            '''
+      stage('6. Deploy to Kubernetes') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'aws-creds', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                    bat '''
+                    aws eks update-kubeconfig --region us-east-1 --name ramji-atm-cluster
+                    C:\\kubernetes\\kubectl.exe apply -f k8s/deploy.yaml
+                    C:\\kubernetes\\kubectl.exe rollout status deployment/ramji-atm-deployment --timeout=60s
+                    '''
+                }
+            }
         }
-    }
-}
 
     post {
         always {
