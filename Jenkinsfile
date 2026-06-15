@@ -10,10 +10,7 @@ pipeline {
 
     stages {
         stage('1. Fetch Source Code') {
-            steps {
-                echo "---- Stage 1: Fetching Code ----"
-                checkout scm
-            }
+            steps { checkout scm }
         }
 
         stage('2. SonarQube Static Scan') {
@@ -33,27 +30,6 @@ pipeline {
             }
         }
 
-        stage('3. Enforce Quality Gate') {
-            steps {
-                echo "---- Stage 3: Checking Quality Gate Status ----"
-                script {
-                    echo "Quality Gate passed successfully."
-                }
-            }
-        }
-
-        stage('4. Docker Build Simulation') {
-            steps {
-                echo "---- Stage 4: Preparing Container Build ----"
-            }
-        }
-
-        stage('5. Docker Push Simulation') {
-            steps {
-                echo "---- Stage 5: Preparing Container Registry Push ----"
-            }
-        }
-
         stage('6. Deploy to Kubernetes') {
             steps {
                 echo "---- Stage 6: Deploying to EKS ----"
@@ -69,11 +45,8 @@ pipeline {
                             :: Apply Deployment
                             C:\\kubernetes\\kubectl.exe --kubeconfig kube.config apply -f k8s/deploy.yaml
                             
-                            :: Debugging: Get Pod Status and Describe them to find Pending reason
+                            :: Debugging: Find Pending pods and Describe them
                             echo ---- Debugging Pending Pods ----
-                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config get pods
-                            
-                            :: Get the name of a pending pod and describe it
                             FOR /F "tokens=1" %%i IN ('C:\\kubernetes\\kubectl.exe --kubeconfig kube.config get pods --no-headers ^| findstr Pending') DO (
                                 echo Describing pod %%i...
                                 C:\\kubernetes\\kubectl.exe --kubeconfig kube.config describe pod %%i
@@ -85,13 +58,6 @@ pipeline {
                     }
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            echo "---- Cleaning Workspace ----"
-            cleanWs()
         }
     }
 }
