@@ -1,62 +1,44 @@
 pipeline {
     agent any
-
+    
     environment {
-        PROJECT_NAME        = 'ATM-Project'
-        SONAR_PROJECT_KEY   = 'atm-project-banking'
-        AWS_REGION          = 'us-east-1'
-        EKS_CLUSTER_NAME    = 'ramji-atm-cluster'
+        // Apne DockerHub username se replace karo
+        DOCKERHUB_CREDENTIALS = 'dockerhub-login' 
+        IMAGE_NAME = 'sauraabh/atm-project-app'
+        IMAGE_TAG = 'latest'
     }
-
+    
     stages {
-        stage('1. Fetch Source Code') {
-            steps { checkout scm }
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/apka-github-user/aapka-repo-name.git'
+            }
         }
-
-        stage('2. SonarQube Static Scan') {
+        
+        stage('Build Docker Image') {
             steps {
                 script {
-                    def scannerHome = tool name: 'sonar-scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                        bat """
-                            "${scannerHome}\\bin\\sonar-scanner.bat" ^
-                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} ^
-                            -Dsonar.host.url=http://20.244.25.0:9000 ^
-                            -Dsonar.login=%SONAR_TOKEN% ^
-                            -Dsonar.sources=.
-                        """
+                    // Docker build karne ke liye
+                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                }
+            }
+        }
+        
+        stage('Push to DockerHub') {
+            steps {
+                script {
+                    docker.withRegistry('', env.DOCKERHUB_CREDENTIALS) {
+                        sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
                     }
                 }
             }
         }
-
-        stage('6. Deploy to Kubernetes') {
+        
+        stage('Deploy to Kubernetes') {
             steps {
-                echo "---- Stage 6: Deploying to EKS ----"
-                withCredentials([
-                    string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_KEY'),
-                    string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET')
-                ]) {
-                    withEnv(["AWS_ACCESS_KEY_ID=${AWS_KEY}", "AWS_SECRET_ACCESS_KEY=${AWS_SECRET}", "AWS_DEFAULT_REGION=${AWS_REGION}"]) {
-                        bat """
-                            :: Update Kubeconfig
-                            aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME} --kubeconfig kube.config
-                            
-                            :: Apply Deployment
-                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config apply -f k8s/deploy.yaml
-                            
-                            :: Debugging: Find Pending pods and Describe them
-                            echo ---- Debugging Pending Pods ----
-                            FOR /F "tokens=1" %%i IN ('C:\\kubernetes\\kubectl.exe --kubeconfig kube.config get pods --no-headers ^| findstr Pending') DO (
-                                echo Describing pod %%i...
-                                C:\\kubernetes\\kubectl.exe --kubeconfig kube.config describe pod %%i
-                            )
-                            
-                            :: Rollout Status
-                            C:\\kubernetes\\kubectl.exe --kubeconfig kube.config rollout status deployment/ramji-atm-deployment --timeout=300s
-                        """
-                    }
-                }
+                // Kubectl use karke deployment update karna
+                sh 'C:\\kubernetes\\kubectl.exe --kubeconfig C:\\kubernetes\\kube.config apply -f k8s/deploy.yaml'
+                sh 'C:\\kubernetes\\kubectl.exe --kubeconfig C:\\kubernetes\\kube.config delete pods -l app=atm-project-app'
             }
         }
     }
