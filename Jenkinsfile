@@ -1,10 +1,9 @@
 pipeline {
     agent any
 
-    // Plugin install karne ke baad ye tools automatically load ho jayenge
+    // NodeJS plugin ke liye tool configuration
     tools {
         nodejs 'NodeJS-26.3.0'
-        dockerTool 'Docker' 
     }
 
     environment {
@@ -30,7 +29,7 @@ pipeline {
         stage('3. Build Docker Image') {
             steps {
                 echo "Building Docker Image..."
-                // Ab Docker tool environment mein hai, seedha command chalegi
+                // Ab ye seedha aapke diye gaye path se docker.exe ko call karega
                 bat "docker build -t ${DOCKER_IMAGE} ."
             }
         }
