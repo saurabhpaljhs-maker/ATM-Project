@@ -28,11 +28,13 @@ pipeline {
 
         stage('3. Build Docker Image') {
             steps {
+                tool name: 'Docker', type: 'dockerTool'   // or whatever name you gave
+
                 echo "Building Docker Image..."
-                // Ab ye seedha aapke diye gaye path se docker.exe ko call karega
-                bat "docker build -t ${DOCKER_IMAGE} ."
+                bat 'docker --version'                    // Diagnostic
+                bat "docker build -t sauraabh/atm-project-app:latest ."
             }
-        }
+       }
 
         stage('4. Push to DockerHub') {
             steps {
