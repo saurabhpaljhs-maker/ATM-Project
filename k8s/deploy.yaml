@@ -24,7 +24,7 @@ spec:
       containers:
       - name: atm-gateway
         # CRITICAL NOTE: Jenkins pipeline is placeholder ko sed command se dynamic image tag se replace karegi
-        image: your-dockerhub-username/atm-project-app:latest
+        image: sauraabh/atm-project-app:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8081 # Hamare server.js aur Dockerfile se tight sync
