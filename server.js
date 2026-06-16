@@ -4,8 +4,10 @@ require('dotenv').config();
 const app = express();
 app.use(express.json());
 
+// Dynamic Port Configuration matching our Jenkins & Docker requirements
 const PORT = process.env.APP_PORT || 8081;
 
+// Mock Database for ATM Accounts (In-Memory Processing)
 const accounts = {
     "account-ramji-101": {
         pin: process.env.ATM_SECURE_PIN || "1234",
@@ -14,21 +16,27 @@ const accounts = {
     }
 };
 
-// 1. Root route - Isse browser mein error nahi aayega
+// --- FIX: Added root route for browser accessibility ---
 app.get('/', (req, res) => {
-    res.status(200).send("<h1>ATM-Project is Running Successfully!</h1><p>Use /api/atm/health for status check.</p>");
+    res.status(200).send("ATM-Project is Running Successfully!");
 });
 
-// 2. Health check endpoint
+// Root standard endpoint for health checks
 app.get('/api/atm/health', (req, res) => {
     res.status(200).json({ status: "UP", project: "ATM-Project", timestamp: new Date() });
 });
 
-// 3. Balance Enquiry API
+// 1. Balance Enquiry API Endpoint
 app.post('/api/atm/balance', (req, res) => {
     const { accountId, pin } = req.body;
-    if (!accounts[accountId]) return res.status(404).json({ error: "Invalid Account Number" });
-    if (accounts[accountId].pin !== pin) return res.status(401).json({ error: "Unauthorized! Incorrect ATM PIN" });
+
+    if (!accounts[accountId]) {
+        return res.status(404).json({ error: "Invalid Account Number" });
+    }
+
+    if (accounts[accountId].pin !== pin) {
+        return res.status(401).json({ error: "Unauthorized! Incorrect ATM PIN" });
+    }
 
     res.status(200).json({
         accountHolder: accounts[accountId].holder,
@@ -36,21 +44,29 @@ app.post('/api/atm/balance', (req, res) => {
     });
 });
 
-// 4. Cash Withdrawal API
+// 2. Cash Withdrawal API Endpoint (With Safety Check Limits)
 app.post('/api/atm/withdraw', (req, res) => {
     const { accountId, pin, amount } = req.body;
-    if (!accounts[accountId]) return res.status(404).json({ error: "Invalid Account Number" });
-    if (accounts[accountId].pin !== pin) return res.status(401).json({ error: "Unauthorized! Incorrect ATM PIN" });
-    if (amount <= 0 || accounts[accountId].balance < amount) return res.status(400).json({ error: "Invalid amount or Insufficient Balance" });
 
+    if (!accounts[accountId]) {
+        return res.status(404).json({ error: "Invalid Account Number" });
+    }
+
+    if (accounts[accountId].pin !== pin) {
+        return res.status(401).json({ error: "Unauthorized! Incorrect ATM PIN" });
+    }
+
+    if (amount <= 0) {
+        return res.status(400).json({ error: "Invalid amount specified" });
+    }
+
+    if (accounts[accountId].balance < amount) {
+        return res.status(400).json({ error: "Transaction Declined: Insufficient ATM Balance" });
+    }
+
+    // Deduct Balance Safely
     accounts[accountId].balance -= amount;
+
     res.status(200).json({
         status: "Success",
-        msg: `Please collect your cash: ₹${amount}`,
-        remainingBalance: `₹${accounts[accountId].balance}`
-    });
-});
-
-app.listen(PORT, () => {
-    console.log(`🚀 ATM-Project Application Gateway active on port: ${PORT}`);
-});
+        msg:
