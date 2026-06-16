@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/apka-github-user/aapka-repo-name.git'
+                git branch: 'main', url: 'https://github.com/saurabhpaljhs-maker/ATM-Project.git'
             }
         }
         
