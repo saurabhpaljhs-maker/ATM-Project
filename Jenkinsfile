@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    // NodeJS tool configure kiya hai, ensure karein Jenkins Tools mein "NodeJS-18" set hai
+    tools {
+        nodejs 'NodeJS-18'
+    }
+
     environment {
         DOCKER_IMAGE = "sauraabh/atm-project-app:latest"
         K8S_CONFIG = "C:\\kubernetes\\kube.config"
@@ -16,8 +21,7 @@ pipeline {
 
         stage('2. Code Analysis') {
             steps {
-                echo "Running unit tests and linting..."
-                // Yahan aap 'npm test' ya 'eslint' command chala sakte ho
+                echo "Running npm install..."
                 sh 'npm install'
             }
         }
