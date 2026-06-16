@@ -3,10 +3,11 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "sauraabh/atm-project-app:latest"
-        K8S_CONFIG = "C:\\kubernetes\\kube.config"
+        // Inhe manually check kar lena ki ye sahi path hain ya nahi
+        NPM_PATH = "C:\\Program Files\\nodejs\\npm.cmd"
+        DOCKER_PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe"
         KUBECTL_PATH = "C:\\kubernetes\\kubectl.exe"
-        // NPM ka path yahan fix kar rahe hain taaki error na aaye
-        PATH = "C:\\Program Files\\nodejs;%PATH%"
+        K8S_CONFIG = "C:\\kubernetes\\kube.config"
     }
 
     stages {
@@ -18,37 +19,37 @@ pipeline {
 
         stage('2. Code Analysis') {
             steps {
-                echo "Running unit tests and linting..."
-                bat 'npm install'
+                echo "Running npm install..."
+                // 'bat' ki jagah seedha executable call kar rahe hain
+                bat "\"${NPM_PATH}\" install"
             }
         }
 
         stage('3. Build Docker Image') {
             steps {
                 echo "Building Docker Image..."
-                bat "docker build -t ${DOCKER_IMAGE} ."
+                bat "\"${DOCKER_PATH}\" build -t ${DOCKER_IMAGE} ."
             }
         }
 
         stage('4. Push to DockerHub') {
             steps {
                 echo "Pushing to DockerHub..."
-                bat "docker push ${DOCKER_IMAGE}"
+                bat "\"${DOCKER_PATH}\" push ${DOCKER_IMAGE}"
             }
         }
 
         stage('5. Deploy to Kubernetes') {
             steps {
                 echo "Deploying to K8s Cluster..."
-                bat "${KUBECTL_PATH} --kubeconfig ${K8S_CONFIG} apply -f k8s/deploy.yaml"
+                bat "\"${KUBECTL_PATH}\" --kubeconfig ${K8S_CONFIG} apply -f k8s/deploy.yaml"
             }
         }
 
         stage('6. Verify & Cleanup') {
             steps {
                 echo "Restarting deployment..."
-                bat "${KUBECTL_PATH} --kubeconfig ${K8S_CONFIG} rollout restart deployment ramji-atm-deployment"
-                echo "Deployment Pipeline Completed Successfully!"
+                bat "\"${KUBECTL_PATH}\" --kubeconfig ${K8S_CONFIG} rollout restart deployment ramji-atm-deployment"
             }
         }
     }
