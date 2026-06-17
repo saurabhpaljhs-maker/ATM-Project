@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        // Apne DockerHub credentials ki ID jo Jenkins mein save ki hai
-        DOCKERHUB_CREDS = credentials('dockerhub-credentials') 
+        // Yahan 'sonarqube-token' wahi ID hai jo aapne Credentials mein di hai
+        SONAR_TOKEN = credentials('sonarqube-token') 
+        DOCKERHUB_CREDS = credentials('dockerhub-credentials')
         DOCKER_IMAGE = "sauraabh/atm-project-app:latest"
-        // SonarQube server ka naam jo aapne Jenkins System config mein diya hai
         SONAR_SERVER = 'MySonarQubeServer'
     }
 
@@ -19,13 +19,13 @@ pipeline {
         stage('2. Code Analysis (SonarQube)') {
             steps {
                 script {
-                    // Tool ka naam jo aapne Jenkins Global Tool config mein diya hai
                     def scannerHome = tool 'SonarScanner' 
                     withSonarQubeEnv("${SONAR_SERVER}") {
+                        // Ab SONAR_TOKEN yahan environment variable ki tarah available hoga
                         sh "${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=ATM-Project \
                             -Dsonar.sources=. \
-                            -Dsonar.host.url=http://<YOUR_VM_IP>:9000 \
+                            -Dsonar.host.url=http://20.244.25.0:9000 \
                             -Dsonar.login=${SONAR_TOKEN}" 
                     }
                 }
@@ -34,7 +34,6 @@ pipeline {
 
         stage('3. Build Docker Image') {
             steps {
-                // dependencies pehle se server pe hain, seedha build
                 sh "docker build -t ${DOCKER_IMAGE} ."
             }
         }
@@ -42,6 +41,7 @@ pipeline {
         stage('4. Push to DockerHub') {
             steps {
                 script {
+                    // DOCKERHUB_CREDS_USR aur PSW automatically generate hote hain jab aap credentials use karte hain
                     sh "echo ${DOCKERHUB_CREDS_PSW} | docker login -u ${DOCKERHUB_CREDS_USR} --password-stdin"
                     sh "docker push ${DOCKER_IMAGE}"
                 }
@@ -51,7 +51,6 @@ pipeline {
 
     post {
         always {
-            // Build ke baad images saaf karne ke liye
             sh "docker rmi ${DOCKER_IMAGE} || true"
         }
     }
