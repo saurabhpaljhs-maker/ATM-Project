@@ -12,23 +12,14 @@ pipeline {
             }
         }
 
-        stage('2. Code Analysis') {
+        stage('2. Build Docker Image') {
             steps {
-                // Jenkins ab aapke configure kiye hue 'node-20' tool ka use karega
-                nodejs('node-20') {
-                    sh 'npm install'
-                }
-            }
-        }
-
-        stage('3. Build Docker Image') {
-            steps {
-                // Docker daemon ab host VM par hai, ye command seedhe chalegi
+                // Ab npm install karne ki zaroorat nahi hai, dependencies pehle se server pe hain
                 sh "docker build -t ${DOCKER_IMAGE} ."
             }
         }
 
-        stage('4. Push to DockerHub') {
+        stage('3. Push to DockerHub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', 
                                        usernameVariable: 'DOCKER_USER', 
