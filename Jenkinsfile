@@ -2,13 +2,12 @@ pipeline {
     agent {
         docker {
             image 'node:20'
-            args '-u root --privileged'   // Required for Docker build inside container
+            args '-u root --privileged'
         }
     }
 
     environment {
         DOCKER_IMAGE = "sauraabh/atm-project-app:latest"
-        // You can add more env variables here later
     }
 
     stages {
@@ -44,8 +43,8 @@ pipeline {
 
         stage('5. Deploy to Kubernetes') {
             steps {
-                echo '🚀 Deployment stage - Ready for future K8s / AWS EKS'
-                // sh 'kubectl apply -f k8s/deployment.yaml'   // Uncomment when ready
+                echo '🚀 Kubernetes deployment stage (ready for future)'
+                // sh 'kubectl apply -f k8s/'   // Uncomment when you have cluster
             }
         }
     }
