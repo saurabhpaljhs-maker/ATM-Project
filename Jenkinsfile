@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        // Yahan 'sonarqube-token' wahi ID hai jo aapne Credentials mein di hai
+        // Credentials (Make sure these IDs match your Jenkins Credentials IDs)
         SONAR_TOKEN = credentials('sonarqube-token') 
         DOCKERHUB_CREDS = credentials('dockerhub-credentials')
-        DOCKER_IMAGE = "sauraabh/atm-project-app:latest"
+        DOCKER_IMAGE = "sauraabh/atm-project-app:${env.BUILD_NUMBER}"
         SONAR_SERVER = 'MySonarQubeServer'
     }
 
@@ -21,7 +21,6 @@ pipeline {
                 script {
                     def scannerHome = tool 'SonarScanner' 
                     withSonarQubeEnv("${SONAR_SERVER}") {
-                        // Ab SONAR_TOKEN yahan environment variable ki tarah available hoga
                         sh "${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=ATM-Project \
                             -Dsonar.sources=. \
@@ -41,7 +40,6 @@ pipeline {
         stage('4. Push to DockerHub') {
             steps {
                 script {
-                    // DOCKERHUB_CREDS_USR aur PSW automatically generate hote hain jab aap credentials use karte hain
                     sh "echo ${DOCKERHUB_CREDS_PSW} | docker login -u ${DOCKERHUB_CREDS_USR} --password-stdin"
                     sh "docker push ${DOCKER_IMAGE}"
                 }
@@ -50,6 +48,13 @@ pipeline {
     }
 
     post {
+        success {
+            echo "CI Success! CD Pipeline trigger ho rahi hai..."
+            // CD Pipeline ko trigger karne ka command
+            build job: 'ATM-CD-Pipeline', parameters: [
+                string(name: 'IMAGE_TAG', value: "${env.BUILD_NUMBER}")
+            ]
+        }
         always {
             sh "docker rmi ${DOCKER_IMAGE} || true"
         }
