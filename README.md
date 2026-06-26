@@ -1,25 +1,16 @@
-**Bhai, samajh gaya!**  
-
-Yeh **real DevOps wale** style mein simple, easy English ka **practical README** hai. Na zyada lambi theory, na over-fancy words — bilkul real experience wala feel.
-
----
-
-### **Final README.md** (Copy-Paste kar do repo mein)
-
-```markdown
 # ATM-Project
 
 **Simple ATM Banking Simulation with Full DevOps Pipeline**
 
-Yeh project ek basic ATM system hai jisme balance check aur cash withdrawal kar sakte ho. Isme main focus DevOps practices pe hai — Docker, Jenkins CI/CD, Terraform, Kubernetes (EKS) tak pura flow.
+This project is a basic ATM system where you can check account balance and withdraw cash. The main focus is to show real DevOps practices — from code to production using Docker, Jenkins CI/CD, Terraform, and Kubernetes (EKS).
 
 ---
 
 ## Project Overview
 
-- Backend: Node.js + Express  
-- ATM operations: Check Balance aur Withdraw  
-- Goal: End-to-end DevOps demonstration (Code → Production)
+- **Backend**: Node.js + Express  
+- **ATM Operations**: Check Balance and Cash Withdrawal  
+- **Goal**: End-to-end DevOps demonstration (From Code → Production)
 
 ---
 
@@ -38,13 +29,13 @@ flowchart TD
 
 ## Tech Stack
 
-- **Language**: Node.js + Express
-- **Container**: Docker
-- **CI/CD**: Jenkins
-- **Code Quality**: SonarQube
-- **IaC**: Terraform (AWS)
-- **Orchestration**: Kubernetes (EKS)
-- **Others**: Ansible (config)
+- **Language**: Node.js + Express  
+- **Container**: Docker  
+- **CI/CD**: Jenkins  
+- **Code Quality**: SonarQube  
+- **IaC**: Terraform (AWS)  
+- **Orchestration**: Kubernetes (EKS)  
+- **Others**: Ansible (Configuration)
 
 ---
 
@@ -77,24 +68,24 @@ ATM-Project/
    npm install
    ```
 
-3. Start the app:
+3. Start the application:
    ```bash
    npm start
    ```
 
-4. Test karo (Postman ya curl se):
+4. Test the APIs (using Postman or curl):
    - Health Check: `GET http://localhost:8081/api/atm/health`
-   - Balance: `POST http://localhost:8081/api/atm/balance`
+   - Check Balance: `POST http://localhost:8081/api/atm/balance`
 
 ---
 
 ## Docker Commands
 
 ```bash
-# Build image
+# Build the Docker image
 docker build -t atm-app .
 
-# Run container
+# Run the container
 docker run -p 8081:8081 atm-app
 ```
 
@@ -102,10 +93,10 @@ docker run -p 8081:8081 atm-app
 
 ## CI/CD Pipeline (Jenkins)
 
-Jenkinsfile mein ye steps hain:
-- Code checkout from GitHub
-- SonarQube code analysis
-- Docker image build
+The Jenkinsfile contains the following steps:
+- Checkout code from GitHub
+- Run SonarQube code analysis
+- Build Docker image
 - Push image to Docker Hub
 - Ready for deployment
 
@@ -115,5 +106,6 @@ Jenkinsfile mein ye steps hain:
 
 ```bash
 kubectl apply -f k8s/deploy.yaml
-````
+```
 
+---
