@@ -1,4 +1,3 @@
-```markdown
 # ATM-Project
 
 **Simple ATM Banking Simulation with Full DevOps Pipeline**
