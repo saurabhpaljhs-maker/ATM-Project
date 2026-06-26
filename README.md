@@ -1,3 +1,4 @@
+```markdown
 # ATM-Project
 
 **Simple ATM Banking Simulation with Full DevOps Pipeline**
@@ -23,6 +24,7 @@ flowchart TD
     Jenkins --> Docker[Docker Build & Push]
     Docker --> K8s[Kubernetes (EKS)]
     Terraform[Terraform IaC] --> AWS[AWS EKS]
+    AWS --> K8s
 ```
 
 ---
@@ -106,6 +108,4 @@ The Jenkinsfile contains the following steps:
 
 ```bash
 kubectl apply -f k8s/deploy.yaml
-```
 
----
