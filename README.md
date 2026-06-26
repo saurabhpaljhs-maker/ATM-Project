@@ -17,12 +17,12 @@ This project is a basic ATM system where you can check account balance and withd
 ## Architecture
 
 ```mermaid
-flowchart TD
-    Git[GitHub] --> Jenkins[Jenkins CI]
+flowchart LR
+    GitHub[GitHub] --> Jenkins[Jenkins CI]
     Jenkins --> Sonar[SonarQube]
     Jenkins --> Docker[Docker Build & Push]
-    Docker --> K8s[Kubernetes (EKS)]
-    Terraform[Terraform IaC] --> AWS[AWS EKS]
+    Docker --> K8s[Kubernetes EKS]
+    Terraform[Terraform] --> AWS[AWS EKS]
     AWS --> K8s
 ```
 
