@@ -2,46 +2,43 @@ pipeline {
     agent any
 
     environment {
-        // Credentials (Make sure these IDs match your Jenkins Credentials IDs)
-        SONAR_TOKEN = credentials('sonarqube-token') 
-        DOCKERHUB_CREDS = credentials('dockerhub-credentials')
-        DOCKER_IMAGE = "sauraabh/atm-project-app:${env.BUILD_NUMBER}"
-        SONAR_SERVER = 'MySonarQubeServer'
+        DOCKER_REGISTRY = "sauraabh"
+        APP_NAME        = "atm-project-app"
+        DOCKER_IMAGE    = "${DOCKER_REGISTRY}/${APP_NAME}:${BUILD_NUMBER}"
     }
 
     stages {
-        stage('1. Checkout Code') {
+        stage('Checkout') {
             steps {
+                cleanWs()
                 checkout scm
             }
         }
 
-        stage('2. Code Analysis (SonarQube)') {
+        stage('SonarQube Analysis') {
             steps {
                 script {
-                    def scannerHome = tool 'SonarScanner' 
-                    withSonarQubeEnv("${SONAR_SERVER}") {
-                        sh "${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.projectKey=ATM-Project \
-                            -Dsonar.sources=. \
-                            -Dsonar.host.url=http://20.244.25.0:9000 \
-                            -Dsonar.login=${SONAR_TOKEN}" 
+                    withSonarQubeEnv('MySonarQubeServer') {
+                        def scannerHome = tool 'SonarScanner'
+                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=ATM-Project -Dsonar.sources=."
                     }
                 }
             }
         }
 
-        stage('3. Build Docker Image') {
+        stage('Docker Build') {
             steps {
                 sh "docker build -t ${DOCKER_IMAGE} ."
             }
         }
 
-        stage('4. Push to DockerHub') {
+        stage('Docker Push') {
             steps {
                 script {
-                    sh "echo ${DOCKERHUB_CREDS_PSW} | docker login -u ${DOCKERHUB_CREDS_USR} --password-stdin"
-                    sh "docker push ${DOCKER_IMAGE}"
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                        sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+                        sh "docker push ${DOCKER_IMAGE}"
+                    }
                 }
             }
         }
@@ -49,10 +46,9 @@ pipeline {
 
     post {
         success {
-            echo "CI Success! CD Pipeline trigger ho rahi hai..."
-            // CD Pipeline ko trigger karne ka command
-            build job: 'ATM-CD-Pipeline', parameters: [
-                string(name: 'IMAGE_TAG', value: "${env.BUILD_NUMBER}")
+            echo "CI completed successfully. Triggering CD pipeline..."
+            build job: 'ATM-CD-Pipeline', wait: false, parameters: [
+                string(name: 'IMAGE_TAG', value: "${BUILD_NUMBER}")
             ]
         }
         always {
